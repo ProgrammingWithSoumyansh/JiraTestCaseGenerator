@@ -1,6 +1,4 @@
 import streamlit as st
-import openai
-import os
 import requests
 from requests.auth import HTTPBasicAuth
 from openai import OpenAI
@@ -62,25 +60,41 @@ def generate_test_cases(requirement):
     )
     return response.choices[0].message.content
 
-# Session state for storing Jira description
+# ✅ Initialize session state variables BEFORE creating widgets
 if "full_description" not in st.session_state:
     st.session_state.full_description = ""
+
+if "user_edited" not in st.session_state:
+    st.session_state.user_edited = False
+
+if "requirement_input" not in st.session_state:
+    st.session_state.requirement_input = ""
 
 # Fetch Jira Description on Button Click
 if st.button("Fetch Jira Description"):
     if jira_domain and issue_key and username and jira_token_key:
-        # Clear previous description before fetching a new one
-        st.session_state.full_description = ""  
-        st.session_state.full_description = fetch_jira_description(jira_domain, issue_key, username, jira_token_key)
+        # Only update the requirement if the user hasn't manually edited it
+        if not st.session_state.user_edited:
+            fetched_description = fetch_jira_description(jira_domain, issue_key, username, jira_token_key)
+            st.session_state.full_description = fetched_description
+            st.session_state.requirement_input = fetched_description  # ✅ Update session state before rendering the text area
+        else:
+            st.warning("You've manually edited the requirement. Clear it first to fetch new data.")
     else:
         st.error("Please enter all Jira credentials.")
 
 # Requirement Input Box (Pre-filled with Jira description when available)
-requirement = st.text_area("Requirement Description", st.session_state.full_description, height=200)
+requirement = st.text_area(
+    "Requirement Description",
+    value=st.session_state.requirement_input,  # ✅ Ensure session state is set before widget is created
+    height=200,
+    key="requirement_input"
+)
 
-# Reset session state if the user manually clears the text area
-if requirement.strip() == "":
-    st.session_state.full_description = ""
+# Detect manual edits
+if requirement != st.session_state.requirement_input:
+    st.session_state.user_edited = True  # Mark manual edit
+    st.session_state.requirement_input = requirement  # ✅ Update requirement input properly
 
 # Generate Test Cases Button
 if st.button("Generate Test Cases"):
