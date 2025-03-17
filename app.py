@@ -69,12 +69,18 @@ if "full_description" not in st.session_state:
 # Fetch Jira Description on Button Click
 if st.button("Fetch Jira Description"):
     if jira_domain and issue_key and username and jira_token_key:
+        # Clear previous description before fetching a new one
+        st.session_state.full_description = ""  
         st.session_state.full_description = fetch_jira_description(jira_domain, issue_key, username, jira_token_key)
     else:
         st.error("Please enter all Jira credentials.")
 
 # Requirement Input Box (Pre-filled with Jira description when available)
 requirement = st.text_area("Requirement Description", st.session_state.full_description, height=200)
+
+# Reset session state if the user manually clears the text area
+if requirement.strip() == "":
+    st.session_state.full_description = ""
 
 # Generate Test Cases Button
 if st.button("Generate Test Cases"):
@@ -87,7 +93,12 @@ if st.button("Generate Test Cases"):
 
         for index, test_case in enumerate(test_cases_list, start=1):
             with st.expander(f"Test Case {index}"):
-                formatted_case = test_case.replace("Test Case", "**Test Case**").replace("Scenario:", "**Scenario:**").replace("Steps to Reproduce:", "**Steps to Reproduce:**").replace("Expected Result:", "**Expected Result:**")
+                formatted_case = (
+                    test_case.replace("Test Case", "**Test Case**")
+                    .replace("Scenario:", "**Scenario:**")
+                    .replace("Steps to Reproduce:", "**Steps to Reproduce:**")
+                    .replace("Expected Result:", "**Expected Result:**")
+                )
                 st.markdown(formatted_case)
     else:
         st.error("Please enter OpenAI API key and requirement description.")
