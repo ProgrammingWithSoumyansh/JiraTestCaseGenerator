@@ -1,4 +1,6 @@
 import streamlit as st
+import openai
+import os
 import requests
 from requests.auth import HTTPBasicAuth
 from openai import OpenAI
@@ -13,8 +15,10 @@ issue_key = st.sidebar.text_input("Jira Issue Key", "SCRUM-1")
 username = st.sidebar.text_input("Jira Username", "soumyansh@gmail.com")
 
 st.sidebar.header("API Keys")
-openai_api_key = st.sidebar.text_input("OpenAI API Key", type="password")
 jira_token_key = st.sidebar.text_input("Jira API Token", type="password")
+
+# Securely fetching OpenAI API Key from Streamlit Secrets
+openai_api_key = st.secrets["openai_api_key"]
 
 # OpenAI Client Setup
 if openai_api_key:
@@ -60,12 +64,9 @@ def generate_test_cases(requirement):
     )
     return response.choices[0].message.content
 
-# ✅ Initialize session state variables BEFORE creating widgets
+# Initialize session state variables
 if "full_description" not in st.session_state:
     st.session_state.full_description = ""
-
-if "user_edited" not in st.session_state:
-    st.session_state.user_edited = False
 
 if "requirement_input" not in st.session_state:
     st.session_state.requirement_input = ""
@@ -73,26 +74,13 @@ if "requirement_input" not in st.session_state:
 # Fetch Jira Description on Button Click
 if st.button("Fetch Jira Description"):
     if jira_domain and issue_key and username and jira_token_key:
-        if not st.session_state.user_edited:  # Prevent overriding manual edits
-            fetched_description = fetch_jira_description(jira_domain, issue_key, username, jira_token_key)
-            st.session_state.full_description = fetched_description
-            st.session_state.requirement_input = fetched_description  # ✅ Set session state properly
-        else:
-            st.warning("You've manually edited the requirement. Clear it first to fetch new data.")
+        st.session_state.full_description = fetch_jira_description(jira_domain, issue_key, username, jira_token_key)
+        st.session_state.requirement_input = st.session_state.full_description  # Sync text area with fetched data
     else:
         st.error("Please enter all Jira credentials.")
 
-# ✅ FIX: Remove `value` from st.text_area to prevent Streamlit warning
-requirement = st.text_area(
-    "Requirement Description",
-    height=200,
-    key="requirement_input"  # Directly controlled by session state
-)
-
-# Detect manual edits
-if requirement != st.session_state.requirement_input:
-    st.session_state.user_edited = True  # Mark manual edit
-    st.session_state.requirement_input = requirement  # ✅ Update session state properly
+# Requirement Input Box (Linked to Session State)
+requirement = st.text_area("Requirement Description", value=st.session_state.requirement_input, key="requirement_input", height=200)
 
 # Generate Test Cases Button
 if st.button("Generate Test Cases"):
@@ -113,4 +101,4 @@ if st.button("Generate Test Cases"):
                 )
                 st.markdown(formatted_case)
     else:
-        st.error("Please enter OpenAI API key and requirement description.")
+        st.error("Please enter a requirement description to generate test cases.")
