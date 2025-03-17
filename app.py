@@ -73,28 +73,26 @@ if "requirement_input" not in st.session_state:
 # Fetch Jira Description on Button Click
 if st.button("Fetch Jira Description"):
     if jira_domain and issue_key and username and jira_token_key:
-        # Only update the requirement if the user hasn't manually edited it
-        if not st.session_state.user_edited:
+        if not st.session_state.user_edited:  # Prevent overriding manual edits
             fetched_description = fetch_jira_description(jira_domain, issue_key, username, jira_token_key)
             st.session_state.full_description = fetched_description
-            st.session_state.requirement_input = fetched_description  # ✅ Update session state before rendering the text area
+            st.session_state.requirement_input = fetched_description  # ✅ Set session state properly
         else:
             st.warning("You've manually edited the requirement. Clear it first to fetch new data.")
     else:
         st.error("Please enter all Jira credentials.")
 
-# Requirement Input Box (Pre-filled with Jira description when available)
+# ✅ FIX: Remove `value` from st.text_area to prevent Streamlit warning
 requirement = st.text_area(
     "Requirement Description",
-    value=st.session_state.requirement_input,  # ✅ Ensure session state is set before widget is created
     height=200,
-    key="requirement_input"
+    key="requirement_input"  # Directly controlled by session state
 )
 
 # Detect manual edits
 if requirement != st.session_state.requirement_input:
     st.session_state.user_edited = True  # Mark manual edit
-    st.session_state.requirement_input = requirement  # ✅ Update requirement input properly
+    st.session_state.requirement_input = requirement  # ✅ Update session state properly
 
 # Generate Test Cases Button
 if st.button("Generate Test Cases"):
